@@ -215,7 +215,6 @@ def Inventory_Remove_Book():
     print("Book Removed!")
 
 def main():
-    to_get_rid_of_lines_left_over_by_remove_book()
     '''The full Book Management System'''
     while True:
         SYSNAME = "BOOK MANAGEMENT SYSTEM"
