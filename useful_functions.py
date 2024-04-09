@@ -8,6 +8,7 @@ def get_string(prompt):
         if len(test_answer)>0 and test_answer.isalpha():
             answer = answer.capitalize()
             break
+        print("ERROR: only enter letters")
     return answer
 
 def get_positive_integer(prompt: str):
