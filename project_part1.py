@@ -9,25 +9,23 @@ def Borrow_a_Book():
         name = get_string("Full Name: ")
 
     # Get a membership number that is only valid with a length of 6 digits
-    memNo = get_positive_integer("Membership Number: ")
-    while len(str(memNo)) != 6:
-        memNo = get_positive_integer("Membership Number: ")
+    memNo = input("Membership Number: ")
+    while len(memNo) != 6 or not memNo.isnumeric():
+        memNo = input("Membership Number: ")
 
     # check for any outstanding borrows
-    formatted_datetime = datetime.now().strftime("%d/%m/%Y")
-    current_date = formatted_datetime.split("/")
-    logs, dates = Review_Borrowed_Books(str(memNo))
-    counter = 0
-    for date in dates:
-        return_date = date.split("/")
-        if current_date[0] <= return_date[0] or current_date[1] <= return_date[1]:
-            counter+=1
-            if counter == 4:
-                print("You have borrowed an excess of books already!")
-                return
+    with open("Borrowed_Books.txt", "r") as file:
+        counter = 0
+        for line in file:
+            line = line.split(", ")
+            if line[1] == memNo:
+                counter+=1
+    if 4 <= counter:
+        print("You have borrowed an excess of books already!")
+        return
 
     # Get a book to be borrowed, validated through book_validator
-    book = book_validator()
+    book = info_validator("Book Name: ", 0, "book_inventory.txt")
 
     # update available amount
     with open('book_inventory.txt', 'r') as file:
@@ -68,17 +66,86 @@ def Borrow_a_Book():
     with open('Borrowed_Books.txt', 'a') as file:
         print(f"{name}, {memNo}, {book}, {formatted_datetime}", file=file)
 
-def book_validator() -> str:
-    '''forms an array of book titles and ensures the title to be borrowed exists in it'''
-    with open("book_inventory.txt", "r") as file:
-        books = []
+def info_validator(prompt: str, arrNum: int, file: str) -> str:
+    '''forms an array from information in a file and ensures the input exists in it'''
+    with open(file, "r") as file:
+        infos = []
         for line in file:
+            info = line.split(", ")
+            infos.append(info[arrNum].capitalize())
+    if infos == []:
+        return
+    query = input(prompt).capitalize()
+    while query not in infos:
+        print(infos)
+        query = input(prompt).capitalize()
+    return query
+
+def return_book():
+    '''Updates the inventory that a book has been borrowed and records a return'''
+    # Get a name that is at least 1 character long and at most 20 characters
+    name = info_validator("Full Name: ", 0, "Borrowed_Books.txt")
+    if name == None:
+        return
+    while 1 > len(name) > 20:
+        name = info_validator("Full Name: ", 0, "Borrowed_Books.txt")
+
+    # Get a membership number that is only valid with a length of 6 digits
+    memNo = info_validator("Membership Number: ", 1, "Borrowed_Books.txt")
+    while len(memNo) != 6 or not memNo.isnumeric():
+        memNo = info_validator("Membership Number: ", 1, "Borrowed_Books.txt")
+
+    # Get a book to be returned
+    book = info_validator("Returned Book: ", 2, "Borrowed_Books.txt")
+    
+    with open("Borrowed_Books.txt", 'r') as file:
+        lines = file.readlines()
+        index = 0
+        book_found = 0
+        for line in lines:
+            index+=1
             line = line.split(", ")
-            books.append(line[0].capitalize())
-    book = input("Book name: ").capitalize()
-    while book not in books:
-        book = input("Book name: ")
-    return book
+            if name == line[0] and memNo == line[1] and book == line[2]:
+                book_found = 1
+                break
+        if book_found != 1:
+            return
+            # Remove the specific lines to delete
+    
+    # Remove the specific lines to delete
+    del lines[index - 1]
+    # Write the modified lines back to the file
+    with open("Borrowed_Books.txt", 'w') as file:
+        file.writelines(lines)
+    print("Book Returned!")
+
+    # update available amount
+    with open('book_inventory.txt', 'r') as file:
+        counter = -1
+        lines = file.readlines()
+        for line in lines:
+            counter += 1
+            line = line.split(", ")
+            if book in line[0].capitalize():
+                break
+        line[2] = str(int(line[2])+1)
+        lines[counter] = ", ".join(line)
+    with open('book_inventory.txt', 'w') as file:
+        file.writelines(lines)
+
+    # update borrow amount inventory
+    with open('book_inventory.txt', 'r') as file:
+        counter = -1
+        lines = file.readlines()
+        for line in lines:
+            counter += 1
+            line = line.split(", ")
+            if book in line[0].capitalize():
+                break
+        line[3] = str(int(line[3])-1) + "\n"
+        lines[counter] = ", ".join(line)
+    with open('book_inventory.txt', 'w') as file:
+        file.writelines(lines)
 
 def Review_Borrowed_Books(allORnameORnumber: str) -> list:
     '''Finds the logs for the specified grouping, whether that be all or a specific member by their name or number, and appends the logs and return dates to their respective arrays'''
@@ -221,7 +288,7 @@ def main():
         print("-"*80)
         print(f"{SYSNAME:^80}")
         print("-"*80)
-        print("a) Borrow a Book\nb) Review Borrowed Books\nc) Manage Inventory\nd) Exit")
+        print("a) Borrow a Book\nb) Review Borrowed Books\nc) Manage Inventory\nd) Return a Book\ne) Exit")
         choice = get_string(">>> ")
         print("-"*80)
         if choice == "A" or choice == "Borrow a book":
@@ -261,6 +328,8 @@ def main():
 
         if choice == "C" or choice == "Manage inventory":
             Manage_Inventory()
-        if choice == "D" or choice == "exit":
+        if choice == "D" or choice == "Return a book":
+            return_book()
+        if choice == "E" or choice == "Exit":
             break
 main()
